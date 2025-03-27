@@ -318,11 +318,134 @@ browserAPI.runtime.onMessage.addListener((message) => {
   }
 });
 
+// URL 변경 감시 함수
+function observeUrlChange() {
+  debugLog("URL 변경 감시 시작");
+
+  let lastUrl = location.href;
+
+  // 플레이어 요소 감시 함수 추가
+  const watchForPlayerElement = () => {
+    debugLog("플레이어 요소 감시 시작");
+
+    const playerObserver = new MutationObserver((mutations) => {
+      const playerElement = document.querySelector(".pzp-pc");
+      const settingButton = document.querySelector(".pzp-setting-button");
+
+      if (
+        playerElement &&
+        location.href.includes("/live/") &&
+        autoQualityEnabled
+      ) {
+        debugLog("플레이어 요소 감지됨, 화질 선택 적용 준비");
+        // 약간의 지연 후 실행하여 플레이어가 완전히 로드되도록 함
+        setTimeout(() => injectQualitySelector(), 1000);
+
+        // 일정 시간 후 다시 한번 시도 (비디오 스트림 전환 대응)
+        setTimeout(() => {
+          if (document.querySelector(".pzp-setting-button")) {
+            debugLog("두 번째 화질 적용 시도");
+            injectQualitySelector();
+          }
+        }, 5000);
+      }
+    });
+
+    playerObserver.observe(document.body, { childList: true, subtree: true });
+  };
+
+  // URL 변경 감시
+  const urlObserver = new MutationObserver(() => {
+    const currentUrl = location.href;
+    if (currentUrl !== lastUrl) {
+      lastUrl = currentUrl;
+      debugLog("URL 변경 감지: " + currentUrl);
+
+      if (currentUrl.includes("/live/") && autoQualityEnabled) {
+        debugLog("라이브 페이지 진입, 화질 선택 기능 적용");
+        // 약간의 지연 적용 (SPA 전환 시간 고려)
+        setTimeout(() => injectQualitySelector(), 1000);
+
+        // 플레이어 요소 감시 시작
+        watchForPlayerElement();
+      }
+    }
+  });
+
+  urlObserver.observe(document, { subtree: true, childList: true });
+
+  // history API 변경 감시 (pushState/replaceState)
+  const originalPushState = history.pushState;
+  const originalReplaceState = history.replaceState;
+
+  history.pushState = function () {
+    originalPushState.apply(this, arguments);
+
+    const currentUrl = location.href;
+    if (currentUrl !== lastUrl) {
+      lastUrl = currentUrl;
+      debugLog("pushState URL 변경 감지: " + currentUrl);
+
+      if (currentUrl.includes("/live/") && autoQualityEnabled) {
+        debugLog("pushState 라이브 페이지 진입, 화질 선택 기능 적용");
+        setTimeout(() => injectQualitySelector(), 1000);
+        watchForPlayerElement();
+      }
+    }
+  };
+
+  history.replaceState = function () {
+    originalReplaceState.apply(this, arguments);
+
+    const currentUrl = location.href;
+    if (currentUrl !== lastUrl) {
+      lastUrl = currentUrl;
+      debugLog("replaceState URL 변경 감지: " + currentUrl);
+
+      if (currentUrl.includes("/live/") && autoQualityEnabled) {
+        debugLog("replaceState 라이브 페이지 진입, 화질 선택 기능 적용");
+        setTimeout(() => injectQualitySelector(), 1000);
+        watchForPlayerElement();
+      }
+    }
+  };
+
+  // popstate 이벤트도 감시
+  window.addEventListener("popstate", () => {
+    const currentUrl = location.href;
+    if (currentUrl !== lastUrl) {
+      lastUrl = currentUrl;
+      debugLog("popstate URL 변경 감지: " + currentUrl);
+
+      if (currentUrl.includes("/live/") && autoQualityEnabled) {
+        debugLog("popstate 라이브 페이지 진입, 화질 선택 기능 적용");
+        setTimeout(() => injectQualitySelector(), 1000);
+        watchForPlayerElement();
+      }
+    }
+  });
+
+  // 현재 페이지가 라이브 페이지이면 즉시 감시 시작
+  if (location.href.includes("/live/")) {
+    watchForPlayerElement();
+  }
+}
+
 // 화질 선택 기능 스크립트 삽입
 function injectQualitySelector() {
   debugLog("화질 선택 기능 스크립트 삽입 중...");
 
+  // 이미 동일한 인스턴스가 실행 중인지 확인
+  if (document.getElementById("chzzk-quality-selector")) {
+    debugLog("화질 선택기가 이미 실행 중입니다. 기존 인스턴스 제거 후 재실행");
+    const oldScript = document.getElementById("chzzk-quality-selector");
+    if (oldScript) {
+      oldScript.remove();
+    }
+  }
+
   const qualityScript = document.createElement("script");
+  qualityScript.id = "chzzk-quality-selector";
   qualityScript.textContent = `
     (function () {
       'use strict';
@@ -355,19 +478,28 @@ function injectQualitySelector() {
   
       function selectBestAvailableQuality() {
         let settingButton = document.querySelector('.pzp-setting-button');
-        if (!settingButton) return;
+        if (!settingButton) {
+          console.log("[Chzzk Extension] 설정 버튼을 찾을 수 없습니다. 나중에 다시 시도합니다.");
+          return false;
+        }
       
         triggerClick(settingButton);
       
         setTimeout(() => {
           let qualityButton = document.querySelector('.pzp-setting-intro-quality');
-          if (!qualityButton) return;
+          if (!qualityButton) {
+            console.log("[Chzzk Extension] 화질 버튼을 찾을 수 없습니다.");
+            return;
+          }
       
           triggerClick(qualityButton);
       
           setTimeout(() => {
             let qualityItems = document.querySelectorAll('.pzp-ui-setting-quality-item.pzp-ui-setting-pane-item');
-            if (qualityItems.length === 0) return;
+            if (qualityItems.length === 0) {
+              console.log("[Chzzk Extension] 화질 옵션을 찾을 수 없습니다.");
+              return;
+            }
       
             let targetQuality;
             
@@ -403,24 +535,63 @@ function injectQualitySelector() {
               triggerClick(targetQuality);
               let innerButton = targetQuality.querySelector("div") || targetQuality.querySelector("span");
               if (innerButton) triggerClick(innerButton);
+              return true;
             }
-          }, 0);
-        }, 0);
+          }, 100);
+        }, 100);
+        
+        return true;
       }
   
       function initAutoQualitySelection() {
-        let delay = firstRun ? 3000 : 700; // 첫방송입장 3000ms : 다음방송입장 700ms
+        let delay = firstRun ? 2000 : 700; // 첫방송입장 2000ms : 다음방송입장 700ms
         firstRun = false;
       
         setTimeout(() => {
           let settingButton = document.querySelector('.pzp-setting-button');
           if (settingButton) {
-            selectBestAvailableQuality();
+            const result = selectBestAvailableQuality();
+            
+            // 첫 시도 후 1초 후 다시 한번 시도 (가끔 첫 시도가 실패하는 경우 대비)
+            if (result) {
+              setTimeout(() => {
+                selectBestAvailableQuality();
+              }, 3000);
+            }
           } else {
+            let retryCount = 0;
+            const maxRetries = 10;
+            
+            const checkForSettingsButton = () => {
+              settingButton = document.querySelector('.pzp-setting-button');
+              if (settingButton) {
+                console.log("[Chzzk Extension] 설정 버튼 발견, 화질 변경 시도");
+                selectBestAvailableQuality();
+                return;
+              }
+              
+              retryCount++;
+              if (retryCount < maxRetries) {
+                console.log("[Chzzk Extension] 설정 버튼 찾기 재시도 (" + retryCount + "/" + maxRetries + ")");
+                setTimeout(checkForSettingsButton, 1000);
+              }
+            };
+            
+            checkForSettingsButton();
+            
             let observer = new MutationObserver((mutations, obs) => {
               let settingButton = document.querySelector('.pzp-setting-button');
-              if (settingButton) {
+              let videoElement = document.querySelector('video');
+              
+              if (settingButton && videoElement) {
+                console.log("[Chzzk Extension] 비디오 및 설정 버튼 감지됨, 화질 선택 시도");
                 selectBestAvailableQuality();
+                
+                // 3초 후 다시 한번 시도
+                setTimeout(() => {
+                  selectBestAvailableQuality();
+                }, 3000);
+                
                 obs.disconnect();
               }
             });
@@ -439,37 +610,64 @@ function injectQualitySelector() {
         document.head.appendChild(style);
       
         setTimeout(() => {
-          document.head.removeChild(style);
-        }, 1000);
+          if (document.head.contains(style)) {
+            document.head.removeChild(style);
+          }
+        }, 1500);
       }
       
-      function observeUrlChange(callback) {
-        let lastUrl = location.href;
-        new MutationObserver(() => {
-          const currentUrl = location.href;
-          if (currentUrl !== lastUrl) {
-            lastUrl = currentUrl;
-            if (currentUrl.includes('/live/')) {
-              callback();
-            }
+      function setupMutationObserver() {
+        // 비디오 플레이어 변경 감지 (스트림 전환 등)
+        const videoObserver = new MutationObserver((mutations) => {
+          // 비디오 요소 변경 감지
+          const hasVideoChanges = mutations.some(mutation => {
+            return Array.from(mutation.addedNodes).some(node => {
+              return node.nodeName === 'VIDEO' || 
+                   (node.nodeType === 1 && node.querySelector('video'));
+            });
+          });
+          
+          if (hasVideoChanges) {
+            console.log("[Chzzk Extension] 비디오 변경 감지, 화질 재설정");
+            // 지연 적용하여 플레이어가 준비되도록 함
+            setTimeout(() => {
+              selectBestAvailableQuality();
+            }, 2000);
           }
-        }).observe(document, { childList: true, subtree: true });
-      
-        window.addEventListener('popstate', () => {
+        });
+        
+        videoObserver.observe(document.body, { childList: true, subtree: true });
+        
+        // URL 변경 감시
+        let lastUrl = location.href;
+        const urlObserver = new MutationObserver(() => {
           const currentUrl = location.href;
           if (currentUrl !== lastUrl) {
             lastUrl = currentUrl;
+            console.log("[Chzzk Extension] URL 변경 감지: " + currentUrl);
+            
             if (currentUrl.includes('/live/')) {
-              callback();
+              console.log("[Chzzk Extension] 라이브 페이지로 이동, 화질 선택 재시도");
+              setTimeout(initAutoQualitySelection, 1000);
             }
           }
         });
+        
+        urlObserver.observe(document, { childList: true, subtree: true });
       }
       
       // 현재 페이지가 라이브 페이지인 경우 초기화
       if (location.href.includes('/live/')) {
         initAutoQualitySelection();
-        observeUrlChange(initAutoQualitySelection);
+        setupMutationObserver();
+        
+        // 페이지 로드 완료 시 다시 한번 시도
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            console.log("[Chzzk Extension] 페이지 로드 완료, 화질 선택 재시도");
+            selectBestAvailableQuality();
+          }, 2000);
+        });
       }
     })();
   `;
@@ -479,41 +677,6 @@ function injectQualitySelector() {
 
   // 첫 실행 상태 업데이트
   firstRun = false;
-}
-
-// URL 변경 감시 함수
-function observeUrlChange() {
-  debugLog("URL 변경 감시 시작");
-
-  let lastUrl = location.href;
-  const observer = new MutationObserver(() => {
-    const currentUrl = location.href;
-    if (currentUrl !== lastUrl) {
-      lastUrl = currentUrl;
-      debugLog("URL 변경 감지: " + currentUrl);
-
-      if (currentUrl.includes("/live/") && autoQualityEnabled) {
-        debugLog("라이브 페이지 진입, 화질 선택 기능 적용");
-        injectQualitySelector();
-      }
-    }
-  });
-
-  observer.observe(document, { subtree: true, childList: true });
-
-  // popstate 이벤트도 감시
-  window.addEventListener("popstate", () => {
-    const currentUrl = location.href;
-    if (currentUrl !== lastUrl) {
-      lastUrl = currentUrl;
-      debugLog("popstate URL 변경 감지: " + currentUrl);
-
-      if (currentUrl.includes("/live/") && autoQualityEnabled) {
-        debugLog("라이브 페이지 진입, 화질 선택 기능 적용");
-        injectQualitySelector();
-      }
-    }
-  });
 }
 
 // 광고 차단 프로그램 팝업 숨김 기능 스크립트 삽입
