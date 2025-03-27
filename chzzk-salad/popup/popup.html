@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      :root {
+        --primary: #00c471;
+        --primary-dark: #00a661;
+        --secondary: #6c7ae0;
+        --light-bg: #f8f9fa;
+        --dark-text: #2d3436;
+        --light-text: #636e72;
+        --disabled: #b2bec3;
+        --border-radius: 12px;
+        --shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        width: 300px;
+        padding: 0;
+        font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui,
+          Roboto, "Segoe UI", sans-serif;
+        background: linear-gradient(to bottom, #ffffff, var(--light-bg));
+        color: var(--dark-text);
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+
+      .header {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 15px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: white;
+        position: relative;
+      }
+
+      h2 {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 4px;
+        letter-spacing: -0.5px;
+      }
+
+      .content {
+        padding: 20px;
+        background: white;
+      }
+
+      .toggle-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        margin-bottom: 18px;
+        position: relative;
+        transition: transform 0.2s;
+      }
+
+      .toggle-container:hover {
+        transform: translateX(3px);
+      }
+
+      .toggle-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--dark-text);
+      }
+
+      .toggle-right {
+        display: flex;
+        align-items: center;
+      }
+
+      .status {
+        font-weight: 600;
+        font-size: 13px;
+        margin-left: 10px;
+      }
+
+      /* 토글 스위치 스타일 */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 48px;
+        height: 24px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #dfe6e9;
+        transition: 0.3s;
+        border-radius: 24px;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+
+      input:checked + .slider {
+        background-color: var(--primary);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(24px);
+      }
+
+      input:focus + .slider {
+        box-shadow: 0 0 1px var(--primary);
+      }
+
+      .info {
+        font-size: 12px;
+        color: var(--light-text);
+        line-height: 1.5;
+        background: var(--light-bg);
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+      }
+
+      /* 구분선 스타일 */
+      .divider {
+        width: 100%;
+        height: 1px;
+        background: linear-gradient(
+          to right,
+          transparent,
+          #dfe6e9,
+          transparent
+        );
+        margin: 15px 0;
+      }
+
+      /* 화질 설정 셀렉트 박스 스타일 */
+      .quality-select {
+        width: 100%;
+        padding: 10px 12px;
+        margin-top: 8px;
+        border-radius: 8px;
+        border: 1px solid #dfe6e9;
+        background-color: white;
+        font-size: 13px;
+        font-family: inherit;
+        color: var(--dark-text);
+        transition: all 0.2s;
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px top 50%;
+        background-size: 10px auto;
+        cursor: pointer;
+      }
+
+      .quality-select:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 2px rgba(0, 196, 113, 0.1);
+      }
+
+      /* 비활성화된 선택 박스 */
+      .disabled {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      /* 푸터 스타일 */
+      .footer {
+        padding: 15px 20px;
+        background: var(--light-bg);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      /* 버전 정보 스타일 */
+      .version-info {
+        font-size: 11px;
+        color: var(--light-text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 5px;
+      }
+
+      .version-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--secondary);
+        color: white;
+        padding: 2px 8px;
+        border-radius: 10px;
+        margin-right: 8px;
+        font-weight: 500;
+        font-size: 10px;
+      }
+
+      .update-available {
+        color: #e17055;
+        font-weight: 600;
+        cursor: pointer;
+        margin-left: 5px;
+        display: inline-flex;
+        align-items: center;
+      }
+
+      .update-available:before {
+        content: "•";
+        display: inline-block;
+        margin-right: 4px;
+        animation: pulse 1.5s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 0.5;
+        }
+        50% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0.5;
+        }
+      }
+
+      /* 개발자 정보 스타일 */
+      .developer-info {
+        font-size: 11px;
+        color: var(--light-text);
+        text-align: center;
+      }
+
+      .developer-info a {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s;
+      }
+
+      .developer-info a:hover {
+        text-decoration: underline;
+        color: var(--primary-dark);
+      }
+
+      /* 호버 효과 */
+      .toggle-container,
+      .quality-select,
+      .footer a {
+        transition: all 0.2s ease;
+      }
+
+      /* 반응형 설정 */
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --light-bg: #2d3436;
+          --dark-text: #dfe6e9;
+          --light-text: #b2bec3;
+        }
+
+        body {
+          background: linear-gradient(to bottom, #2d3436, #1e272e);
+        }
+
+        .content {
+          background: #1e272e;
+        }
+
+        .info {
+          background: #2d3436;
+        }
+
+        .quality-select {
+          background-color: #2d3436;
+          border-color: #636e72;
+          color: #dfe6e9;
+          background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23dfe6e9%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h2>Chzzk Salad</h2>
+        <div class="version-info">
+          <div class="version-badge">
+            v<span id="current-version">1.0</span>
+          </div>
+          <span id="update-status"></span>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="toggle-container">
+          <span class="toggle-label">P2P 차단 기능</span>
+          <div class="toggle-right">
+            <label class="switch">
+              <input type="checkbox" id="toggle" />
+              <span class="slider"></span>
+            </label>
+            <span class="status" id="status">활성화됨</span>
+          </div>
+        </div>
+
+        <p class="info">
+          네이버 치지직 사이트에서 P2P 기능을 차단하여 더 안정적인 시청 환경을
+          제공합니다.
+        </p>
+
+        <div class="divider"></div>
+
+        <div class="toggle-container">
+          <span class="toggle-label">자동 화질 선택</span>
+          <div class="toggle-right">
+            <label class="switch">
+              <input type="checkbox" id="quality-toggle" />
+              <span class="slider"></span>
+            </label>
+            <span class="status" id="quality-status">활성화됨</span>
+          </div>
+        </div>
+
+        <div class="toggle-container">
+          <span class="toggle-label">선호 화질</span>
+          <select id="quality-select" class="quality-select">
+            <option value="최고화질">최고화질</option>
+            <option value="1080p">1080p</option>
+            <option value="720p">720p</option>
+            <option value="480p">480p</option>
+            <option value="360p">360p</option>
+          </select>
+        </div>
+
+        <p class="info">방송 입장 시 선택한 화질로 자동 설정합니다.</p>
+
+        <div class="divider"></div>
+
+        <div class="toggle-container">
+          <span class="toggle-label">광고 차단 팝업 숨김</span>
+          <div class="toggle-right">
+            <label class="switch">
+              <input type="checkbox" id="adblock-popup-toggle" />
+              <span class="slider"></span>
+            </label>
+            <span class="status" id="adblock-popup-status">활성화됨</span>
+          </div>
+        </div>
+
+        <p class="info">
+          "광고 차단 프로그램을 사용 중이신가요?" 팝업을 자동으로 숨기고
+          차단합니다.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p class="info" style="margin-bottom: 0">
+          변경 후 페이지를 새로고침하면 설정이 적용됩니다.
+        </p>
+        <div class="developer-info">
+          개발자: <a href="https://ivlis.kr" target="_blank">ivLis</a>
+        </div>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

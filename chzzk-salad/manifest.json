@@ -1,0 +1,58 @@
+{
+  "manifest_version": 2,
+  "name": "Chzzk Salad",
+  "version": "1.0",
+  "description": "네이버 치지직 사이트에서 P2P 차단, 자동 화질 선택, 광고 차단 알림 팝업 숨김 기능을 제공합니다",
+  "author": "ivLis",
+  "homepage_url": "https://ivlis.kr",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "me@ivl.is",
+      "strict_min_version": "57.0"
+    }
+  },
+  "icons": {
+    "48": "icons/icon-48.png",
+    "96": "icons/icon-96.png"
+  },
+  "permissions": [
+    "*://*.chzzk.naver.com/*",
+    "https://chzzk.naver.com/*",
+    "storage",
+    "webRequest",
+    "webRequestBlocking",
+    "https://raw.githubusercontent.com/*"
+  ],
+  "content_security_policy": "script-src 'self' https://unpkg.com https://cdn.jsdelivr.net; object-src 'self'; connect-src 'self' https://raw.githubusercontent.com",
+  "content_scripts": [
+    {
+      "matches": ["*://*.chzzk.naver.com/*", "https://chzzk.naver.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": true
+  },
+  "browser_action": {
+    "default_icon": {
+      "19": "icons/icon-19.png",
+      "38": "icons/icon-38.png"
+    },
+    "default_title": "Chzzk Salad",
+    "default_popup": "popup/popup.html"
+  },
+  "action": {
+    "default_icon": {
+      "19": "icons/icon-19.png",
+      "38": "icons/icon-38.png"
+    },
+    "default_title": "Chzzk Salad",
+    "default_popup": "popup/popup.html"
+  },
+  "options_ui": {
+    "page": "options/options.html",
+    "browser_style": true
+  }
+}
